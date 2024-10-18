@@ -1,0 +1,48 @@
+name: "Code scanning"
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  CodeQL-Build:
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    # Get the code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      # Override language selection by uncommenting this and choosing your languages
+      with:
+         languages: javascript, csharp
+         config-file: ./.github/codeql/codeql-config.yml
+
+    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
+    # If this step fails, then you should remove it and run the build manually (see below)
+    # - name: Autobuild
+    #   uses: github/codeql-action/autobuild@v3
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.0.x
+        
+    - name: Install dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
+    - uses: actions/upload-artifact@v3
+      with:
+        path: /home/runner/work/WebGoat.NETCore/results/*.sarif

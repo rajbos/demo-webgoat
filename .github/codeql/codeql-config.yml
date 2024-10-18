@@ -1,0 +1,11 @@
+name: "CodeQL config"
+
+queries:
+  - uses: security-and-quality
+
+#exclude:
+#    id:
+#    - js/missing-rate-limiting
+#    - js/zipslip
+#    - js/double-escaping
+#    - js/insecure-randomness

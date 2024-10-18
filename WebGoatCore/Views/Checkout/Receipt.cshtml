@@ -1,0 +1,65 @@
+﻿@model Order?
+
+@{
+    ViewData["Title"] = "Receipt";
+}
+
+@Html.ValidationSummary()
+<div id="MainContent_lblOutput">
+    <div class="receiptDiv">
+        @if (Model != null)
+        {
+            <p>Order: @Model.OrderId</p>
+            <table class="Receipt">
+                <tbody>
+                    <tr>
+                        <th>Product Id</th>
+                        <th>Product Name</th>
+                        <th>Unit Price</th>
+                        <th>Quantity</th>
+                        <th>Extended Price</th>
+                    </tr>
+                    @foreach (var orderDetails in Model.OrderDetails)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-controller="Product" asp-action="Details" asp-route-productId=@orderDetails.ProductId>@orderDetails.ProductId</a>
+                            </td>
+                            <td>@orderDetails.Product.ProductName</td>
+                            <td>@orderDetails.DecimalUnitPrice</td>
+                            <td>@orderDetails.Quantity</td>
+                            <td>@orderDetails.ExtendedPrice</td>
+                        </tr>
+                    }
+                    @if (Model.OrderDetails.Any())
+                    {
+                        <tr><td class="table-separator" colspan="5"></td></tr>
+                    }
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right">Subtotal:</td>
+                        <td></td>
+                        <td></td>
+                        <td class="SubTotal" style="text-align: right;">@Model.SubTotal</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right">Freight:</td>
+                        <td></td>
+                        <td></td>
+                        <td style="text-align: right;">@Model.Freight</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right">Total:</td>
+                        <td></td>
+                        <td></td>
+                        <td class="SubTotal" style="text-align: right;">@Model.Total</td>
+                    </tr>
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+<br>
+<a asp-controller="Product" asp-action="Search">Keep shopping</a>
