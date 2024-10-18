@@ -34,19 +34,30 @@ namespace WebGoatCore.Data
             // _context.SaveChanges();
             // return order.OrderId;
 
-            string shippedDate = order.ShippedDate.HasValue ? "'" + string.Format("yyyy-MM-dd", order.ShippedDate.Value) + "'" : "NULL";
             var sql = "INSERT INTO Orders (" +
                 "CustomerId, EmployeeId, OrderDate, RequiredDate, ShippedDate, ShipVia, Freight, ShipName, ShipAddress, " +
                 "ShipCity, ShipRegion, ShipPostalCode, ShipCountry" +
                 ") VALUES (" +
-                $"'{order.CustomerId}','{order.EmployeeId}','{order.OrderDate:yyyy-MM-dd}','{order.RequiredDate:yyyy-MM-dd}'," +
-                $"{shippedDate},'{order.ShipVia}','{order.Freight}','{order.ShipName}','{order.ShipAddress}'," +
-                $"'{order.ShipCity}','{order.ShipRegion}','{order.ShipPostalCode}','{order.ShipCountry}')";
-            sql += ";\nSELECT OrderID FROM Orders ORDER BY OrderID DESC LIMIT 1;";
+                "@CustomerId, @EmployeeId, @OrderDate, @RequiredDate, @ShippedDate, @ShipVia, @Freight, @ShipName, @ShipAddress, " +
+                "@ShipCity, @ShipRegion, @ShipPostalCode, @ShipCountry);" +
+                "SELECT OrderID FROM Orders ORDER BY OrderID DESC LIMIT 1;";
 
             using (var command = _context.Database.GetDbConnection().CreateCommand())
             {
                 command.CommandText = sql;
+                command.Parameters.Add(new SqlParameter("@CustomerId", order.CustomerId));
+                command.Parameters.Add(new SqlParameter("@EmployeeId", order.EmployeeId));
+                command.Parameters.Add(new SqlParameter("@OrderDate", order.OrderDate.ToString("yyyy-MM-dd")));
+                command.Parameters.Add(new SqlParameter("@RequiredDate", order.RequiredDate.ToString("yyyy-MM-dd")));
+                command.Parameters.Add(new SqlParameter("@ShippedDate", order.ShippedDate.HasValue ? (object)order.ShippedDate.Value.ToString("yyyy-MM-dd") : DBNull.Value));
+                command.Parameters.Add(new SqlParameter("@ShipVia", order.ShipVia));
+                command.Parameters.Add(new SqlParameter("@Freight", order.Freight));
+                command.Parameters.Add(new SqlParameter("@ShipName", order.ShipName));
+                command.Parameters.Add(new SqlParameter("@ShipAddress", order.ShipAddress));
+                command.Parameters.Add(new SqlParameter("@ShipCity", order.ShipCity));
+                command.Parameters.Add(new SqlParameter("@ShipRegion", order.ShipRegion));
+                command.Parameters.Add(new SqlParameter("@ShipPostalCode", order.ShipPostalCode));
+                command.Parameters.Add(new SqlParameter("@ShipCountry", order.ShipCountry));
                 _context.Database.OpenConnection();
 
                 using var dataReader = command.ExecuteReader();
@@ -54,32 +65,45 @@ namespace WebGoatCore.Data
                 order.OrderId = Convert.ToInt32(dataReader[0]);
             }
 
-            sql = ";\nINSERT INTO OrderDetails (" +
-                "OrderId, ProductId, UnitPrice, Quantity, Discount" +
-                ") VALUES ";
-            foreach (var (orderDetails, i) in order.OrderDetails.WithIndex())
+            foreach (var orderDetails in order.OrderDetails)
             {
-                orderDetails.OrderId = order.OrderId;
-                sql += (i > 0 ? "," : "") +
-                    $"('{orderDetails.OrderId}','{orderDetails.ProductId}','{orderDetails.UnitPrice}','{orderDetails.Quantity}'," +
-                    $"'{orderDetails.Discount}')";
+                sql = "INSERT INTO OrderDetails (" +
+                    "OrderId, ProductId, UnitPrice, Quantity, Discount" +
+                    ") VALUES (" +
+                    "@OrderId, @ProductId, @UnitPrice, @Quantity, @Discount);";
+
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = sql;
+                    command.Parameters.Add(new SqlParameter("@OrderId", orderDetails.OrderId));
+                    command.Parameters.Add(new SqlParameter("@ProductId", orderDetails.ProductId));
+                    command.Parameters.Add(new SqlParameter("@UnitPrice", orderDetails.UnitPrice));
+                    command.Parameters.Add(new SqlParameter("@Quantity", orderDetails.Quantity));
+                    command.Parameters.Add(new SqlParameter("@Discount", orderDetails.Discount));
+                    _context.Database.OpenConnection();
+                    command.ExecuteNonQuery();
+                }
             }
 
             if(order.Shipment != null)
             {
                 var shipment = order.Shipment;
                 shipment.OrderId = order.OrderId;
-                sql += ";\nINSERT INTO Shipments (" +
+                sql = "INSERT INTO Shipments (" +
                     "OrderId, ShipperId, ShipmentDate, TrackingNumber" +
                     ") VALUES (" +
-                    $"'{shipment.OrderId}','{shipment.ShipperId}','{shipment.ShipmentDate:yyyy-MM-dd}','{shipment.TrackingNumber}')";
-            }
+                    "@OrderId, @ShipperId, @ShipmentDate, @TrackingNumber);";
 
-            using (var command = _context.Database.GetDbConnection().CreateCommand())
-            {
-                command.CommandText = sql;
-                _context.Database.OpenConnection();
-                command.ExecuteNonQuery();
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = sql;
+                    command.Parameters.Add(new SqlParameter("@OrderId", shipment.OrderId));
+                    command.Parameters.Add(new SqlParameter("@ShipperId", shipment.ShipperId));
+                    command.Parameters.Add(new SqlParameter("@ShipmentDate", shipment.ShipmentDate.ToString("yyyy-MM-dd")));
+                    command.Parameters.Add(new SqlParameter("@TrackingNumber", shipment.TrackingNumber));
+                    _context.Database.OpenConnection();
+                    command.ExecuteNonQuery();
+                }
             }
 
             return order.OrderId;
